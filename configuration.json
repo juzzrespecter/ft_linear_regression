@@ -1,0 +1,9 @@
+{
+    "hyperparameters": {
+        "learning_rate": 0.3,
+        "n_iterations": 300,
+        "tolerance": 0.3
+    },
+    "theta0": 0,
+    "theta1": 0
+}
