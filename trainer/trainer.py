@@ -26,8 +26,8 @@ def arg_handler() -> argparse.Namespace:
 def training_model():
     with open('../configuration.json') as c_file:
         c = json.loads(c_file)
-        with open('csv_file') as d_file:
-            dataset = csv.
+        with open('csv_file', newline='') as d_file:
+            dataset = csv.reader(d_file)
             pass
         pass
     pass
