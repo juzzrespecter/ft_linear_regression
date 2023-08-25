@@ -53,11 +53,14 @@ class TrainingModel(dict):
 
     def __train_print_loop(self, lr, e):
         ds = self.__get_value('dataset')
-        plt.scatter(x=ds['km'], y=ds['price'])
-        plt.title('ft_linear_regression')
         plt.xlabel('mileage')
         plt.ylabel('price')
 
+        fig, ax = plt.subplots()
+        ax.scatter(x=ds['km'], y=ds['price'])
+        ax.set(xlabel='mileage', ylabel='price', title='ft_linear_regression')
+        
+        #plt.show(block=False)
         plt.show()
         pass
 
@@ -69,11 +72,9 @@ class TrainingModel(dict):
         theta1 = self.__get_value('theta1')
 
         self.__train_print_loop(lr, e)
-        for _ in range(3):
+        for _ in range(n):
             tmpTheta0 = lr * self.__theta0_sum(theta0, theta1)
             tmpTheta1 = lr * self.__theta1_sum(theta0, theta1)
-            if abs(theta1 - tmpTheta1) < e: # esta condicion tiene que ser el coste
-                break
             theta0 = theta0 - tmpTheta0
             theta1 = theta1 - tmpTheta1
             print(f'y = {theta0} + {theta1} * x')
