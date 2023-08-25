@@ -59,9 +59,9 @@ class TrainingModel(dict):
         fig, ax = plt.subplots()
         ax.scatter(x=ds['km'], y=ds['price'])
         ax.set(xlabel='mileage', ylabel='price', title='ft_linear_regression')
-        
-        #plt.show(block=False)
-        plt.show()
+        x = [0, 100]
+        y = [-(theta0/theta1), (x - theta0)/theta1]
+
         pass
 
     def train(self):
