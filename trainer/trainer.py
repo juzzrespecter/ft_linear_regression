@@ -35,7 +35,7 @@ class TrainingModel(dict):
         ds = self.__get_value('dataset')
         sum = 0
         for i in range(len(ds)):
-            print(f'sum = {sum} + {theta0} + {theta1} * {ds["km"][i]} - {ds["price"][i]}')
+            print(f'sum0 = {sum} + {theta0} + {theta1} * {ds["km"][i]} - {ds["price"][i]}')
             sum = sum + theta0 + theta1 * ds['km'][i] - ds['price'][i]
         print(f'{sum}, {sum * (1 / len(ds))}')
         return sum * (1 / len(ds))
@@ -45,45 +45,38 @@ class TrainingModel(dict):
         n = len(ds)
         sum = 0
         for i in range(n):
+            print(f'sum1 = {sum} + ({theta0} + {theta1} * {ds["km"][i]} - {ds["price"][i]}) * {ds["km"][i]}')            
             sum = sum + (theta0 + theta1 * ds['km'][i] - ds['price'][i]) * ds['km'][i]
+        print(f'{sum}, {sum * (1 / len(ds))}')            
         return sum * (1 / n)
 
-    def __train_loop(self):
-        pass
-
-    def __train_print_loop(self, lr, e):
-        ds = self.__get_value('dataset')
-        plt.xlabel('mileage')
-        plt.ylabel('price')
-
-        fig, ax = plt.subplots()
-        ax.scatter(x=ds['km'], y=ds['price'])
-        ax.set(xlabel='mileage', ylabel='price', title='ft_linear_regression')
-        x = [0, 100]
-        y = [-(theta0/theta1), (x - theta0)/theta1]
-
-        pass
-
     def train(self):
+        ds = self.__get_value('dataset')
         lr = self.__get_value('learning_rate')
         n = self.__get_value('n_iterations')
         e = self.__get_value('tolerance')
         theta0 = self.__get_value('theta0')
-        theta1 = self.__get_value('theta1')
+        theta1 = self.__get_value('theta1')        
 
-        self.__train_print_loop(lr, e)
-        for _ in range(n):
+        # set up figure
+        fig, ax = plt.subplots()
+        ax.scatter(x=ds['km'], y=ds['price'])
+        ax.set(xlabel='mileage', ylabel='price', title='ft_linear_regression')
+
+        for _ in range(3):
             tmpTheta0 = lr * self.__theta0_sum(theta0, theta1)
             tmpTheta1 = lr * self.__theta1_sum(theta0, theta1)
             theta0 = theta0 - tmpTheta0
             theta1 = theta1 - tmpTheta1
             print(f'y = {theta0} + {theta1} * x')
-            
+
+        line = ax.plot([0, 100], [-(theta0/theta1), (100 - theta0)/theta1])
         with open('../configuration.json') as c_file:
             c = json.loads(c_file.read())
-            theta0 = c.theta0
-            theta1 = c.theta1
-            json.dumps(c, c_file)
+            theta0 = c['theta0']
+            theta1 = c['theta1']
+            json.dump(c, c_file)        
+        plt.show()
 
 
 def arg_handler() -> argparse.Namespace:
