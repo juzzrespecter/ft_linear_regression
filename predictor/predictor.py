@@ -13,6 +13,12 @@ def linear_model_prediction(value: int) -> None:
         pass
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser
+    parser = argparse.ArgumentParser(
+        prog='Predictor',
+        description='mileage predictor'
+    )
     parser.add_argument(name='value')
+    args = parser.parse_args()
+
+    linear_model_prediction(args.value)
     pass

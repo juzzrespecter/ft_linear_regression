@@ -7,10 +7,6 @@ import argparse
 import logging
 import matplotlib.pyplot as plt
 
-# main loop: if -v is activated print into terminal
-#   if -i is activated open graph and actualize (plot data and linear model)    
-# save theta0 and theta1 into configuration file
-
             
 class TrainingModel(dict):
     def __set_value(self, name, value):
@@ -18,40 +14,69 @@ class TrainingModel(dict):
 
     def __get_value(self, name):
         return self.__dict__[name]
+
+    def __normalize(self, a):
+        min, max = a.min(), a.max()
+        return a.map(lambda n: (n - min) / (max - min))
     
-    def __init__(self, dataset='../data.csv'):
+    def __get_std_coeff(self, x, y):
+        return (y.max() - y.min()) / (x.max() - x.min())
+    
+    def __init__(self, dataset='../data.csv', verbose=False, visual=False):
         with open('../configuration.json') as c_file:
             c = json.loads(c_file.read())
+        plt.plot(xlabel='mileage', ylabel='price', title='ft_linear_regression')
         with open(dataset) as ds_file:
-            ds = read_csv(ds_file)
-            self.__set_value('dataset', ds)
+            tr_set = read_csv(ds_file)
+            n_tr_set = (tr_set - tr_set.min()) / (tr_set.max() - tr_set.min())
+#            plt.scatter(x=tr_set['km'], y=tr_set['price'])
+            self.__set_value('x', self.__normalize(n_tr_set['km']))
+            self.__set_value('y', self.__normalize(n_tr_set['price']))
+
+            self.__set_value('training_set', tr_set)
+            self.__set_value('normalized_training_set', n_tr_set)
+            plt.scatter(x=self.__get_value('x'), y=self.__get_value('y'))            
         self.__set_value('learning_rate', c['hyperparameters']['learning_rate'])
         self.__set_value('n_iterations', c['hyperparameters']['n_iterations'])
         self.__set_value('tolerance', c['hyperparameters']['tolerance'])
         self.__set_value('theta0', c['theta0'])
         self.__set_value('theta1', c['theta1'])
+        self.__set_value('verbose', verbose)
+        self.__set_value('visual', visual)
+
+    def __cost_func(self, theta, m):
+        x, y = self.__get_value('x'), self.__get_value('y')
+        err_sum = 0
+        for i in range(m):
+            err_sum += (self.__y_predict(theta, x[i]) - y[i]) ** 2
+        return err_sum / (2 * m)
+
+    def __y_predict(self, theta, x):
+        theta0, theta1 = theta
+        return theta0 + theta1 * x
 
     def __theta0_sum(self, theta0, theta1):
-        ds = self.__get_value('dataset')
-        sum = 0
-        for i in range(len(ds)):
-            print(f'sum0 = {sum} + {theta0} + {theta1} * {ds["km"][i]} - {ds["price"][i]}')
-            sum = sum + theta0 + theta1 * ds['km'][i] - ds['price'][i]
-        print(f'{sum}, {sum * (1 / len(ds))}')
-        return sum * (1 / len(ds))
-            
-    def __theta1_sum(self, theta0, theta1):
-        ds = self.__get_value('dataset')
-        n = len(ds)
+        x = self.__get_value('x')
+        y = self.__get_value('y')
+        n = len(x)
         sum = 0
         for i in range(n):
-            print(f'sum1 = {sum} + ({theta0} + {theta1} * {ds["km"][i]} - {ds["price"][i]}) * {ds["km"][i]}')            
-            sum = sum + (theta0 + theta1 * ds['km'][i] - ds['price'][i]) * ds['km'][i]
-        print(f'{sum}, {sum * (1 / len(ds))}')            
+            sum += self.__y_predict([theta0, theta1], x[i]) - y[i]
         return sum * (1 / n)
+            
+    def __theta1_sum(self, theta0, theta1):
+        x = self.__get_value('x')
+        y = self.__get_value('y')
+        n = len(x)
+        sum = 0
+        for i in range(n):
+            sum += (self.__y_predict([theta0, theta1], x[i]) - y[i]) * x[i]      
+        return sum * (1 / n)
+    
+    def __debug(self):
+        pass
 
     def train(self):
-        ds = self.__get_value('dataset')
         lr = self.__get_value('learning_rate')
         n = self.__get_value('n_iterations')
         e = self.__get_value('tolerance')
@@ -59,23 +84,31 @@ class TrainingModel(dict):
         theta1 = self.__get_value('theta1')        
 
         # set up figure
-        fig, ax = plt.subplots()
-        ax.scatter(x=ds['km'], y=ds['price'])
-        ax.set(xlabel='mileage', ylabel='price', title='ft_linear_regression')
+#        _, ax = plt.subplots()
+#        ax.scatter(x=self.__get_value('x'), y=self.__get_value('y'))
+#        ax.set(xlabel='mileage', ylabel='price', title='ft_linear_regression')
 
-        for _ in range(3):
+        for i in range(n):
             tmpTheta0 = lr * self.__theta0_sum(theta0, theta1)
             tmpTheta1 = lr * self.__theta1_sum(theta0, theta1)
-            theta0 = theta0 - tmpTheta0
+            theta0 = theta0 - tmpTheta0   
             theta1 = theta1 - tmpTheta1
-            print(f'y = {theta0} + {theta1} * x')
+            if self.
+            print(f'[ ITERATION {i} ] y = {theta0} + {theta1} * x')
 
-        line = ax.plot([0, 100], [-(theta0/theta1), (100 - theta0)/theta1])
-        with open('../configuration.json') as c_file:
+#        line = ax.axline(xy1=(0, theta0), slope=theta1)
+        #print(f'before conv: {theta0}, {theta1}')
+        #theta1 = theta1 * self.__get_value('std_coeff')
+        #theta0 = self.__get_value('ymin') - theta1 * self.__get_value('xmin')
+        #print(f'after conv: {theta0}, {theta1}')        
+        plt.axline(xy1=(0, theta0), slope=theta1)
+        with open('../configuration.json', 'r+') as c_file:
             c = json.loads(c_file.read())
-            theta0 = c['theta0']
-            theta1 = c['theta1']
-            json.dump(c, c_file)        
+            print(f'{theta0}, {theta1}')
+            c['theta0'] = theta0
+            c['theta1'] = theta1
+            c_file.seek(0)
+            json.dump(c, c_file, indent=2)        
         plt.show()
 
 
@@ -96,9 +129,15 @@ def arg_handler() -> argparse.Namespace:
 if __name__ == "__main__":
     args = arg_handler()
 #    try:
-    t = TrainingModel(dataset=args.DATASET)
+    t = TrainingModel(dataset=args.DATASET,
+                      verbose=args.verbose,
+                      visual=args.visual)
     t.train()
 #    except Exception as e:
 #        logging.error(str(e))
 #        sys.exit(1)
     sys.exit(0)
+
+
+# TODO
+# sklearn for testing
