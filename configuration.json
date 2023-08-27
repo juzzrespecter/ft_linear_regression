@@ -1,9 +1,9 @@
 {
   "hyperparameters": {
     "learning_rate": 0.05,
-    "n_iterations": 5000,
-    "tolerance": 0.3
+    "n_iterations": 20000,
+    "tolerance": 0.0104
   },
-  "theta0": 0,
-  "theta1": 0
-}}
+  "theta0": 8594.217322176719,
+  "theta1": -0.022348804097554433
+}
