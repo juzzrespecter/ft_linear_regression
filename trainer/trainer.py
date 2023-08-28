@@ -5,8 +5,10 @@ from pandas import read_csv
 import sys
 import argparse
 import logging
-import matplotlib.pyplot as plt
-from sklearn.linear_model import LinearRegression
+#import matplotlib.pyplot as plt
+import plotly.express as px
+from plotly.subplots import make_subplots
+
 
             
 class TrainingModel(dict):
@@ -29,20 +31,24 @@ class TrainingModel(dict):
         theta0_d = theta0 * (ymax - ymin) + ymin - (theta1_d * xmin)
         return theta0_d, theta1_d
     
-    def __get_std_coeff(self, x, y):
-        return (y.max() - y.min()) / (x.max() - x.min())
-    
-    def __init__(self, dataset='../data.csv', verbose=False, visual=False):
-        self.__set_value('verbose', verbose)
+    def __init__(self, dataset='../data.csv', visual=False, debug=False):
         self.__set_value('visual', visual)
+        self.__set_value('debug', debug)        
         with open('../configuration.json') as c_file:
             c = json.loads(c_file.read())
         with open(dataset) as ds_file:
             tr_set = read_csv(ds_file)
             n_tr_set = (tr_set - tr_set.min()) / (tr_set.max() - tr_set.min())
             if self.visual:
-                plt.scatter(x=tr_set['km'], y=tr_set['price'])
-                plt.plot(xlabel='mileage', ylabel='price', title='ft_linear_regression') # no chusca 
+                #_, (pred, cost, hist) = plt.subplots(nrows=1, ncols=3)
+                # fig = make_subplots(rows=1, cols=3)
+                # pred.scatter(x=tr_set['km'], y=tr_set['price'], color='red')
+                # pred.set(xlabel='mileage', ylabel='price', title='Linear Regression')
+                # cost.set(xlabel='n iterations', ylabel='cost', title='Cost funciton')
+                # hist.set(xlabel='mileage', ylabel='error')
+                # self.__set_value('pred_ax', pred)
+                # self.__set_value('cost_ax', cost)
+                # self.__set_value('hist_ax', hist)
             self.__set_value('x', self.__normalize(n_tr_set['km']))
             self.__set_value('y', self.__normalize(n_tr_set['price']))
             self.__set_value('training_set', tr_set)
@@ -65,6 +71,25 @@ class TrainingModel(dict):
         theta0, theta1 = theta
         return theta0 + theta1 * x
 
+    def __plot_hist(self, hist_cost, theta):
+        x, y = self.training_set['km'], self.training_set['price']
+        err = [self.__y_predict(xi, theta) - yi for (xi, yi) in (x, y)]
+        self.__get_value('hist_ax').bar(x=len(err), height=err)
+
+    def __plot_cost(self, hist_cost):
+        i_cost = enumerate(hist_cost)
+        i = [i[0] for i in i_cost]
+        cost = [cost[1] for cost in i_cost]
+        self.__get_value('cost_ax').plot(i, cost, color='cyan')
+
+    def __plot_values(self, hist_cost, theta):
+        x, y = self.training_set['km'], self.training_set['price']
+        lr = px.scatter(self.training_set, x='mileage', y='price')
+        fig = make_subplots(rows=1, cols=3,
+                            subplot_titles=("Linear Regresssion", "Cost Function", "Error Histogram"))
+
+        pass
+
     def __theta0_sum(self, theta0, theta1):
         x = self.__get_value('x')
         y = self.__get_value('y')
@@ -82,9 +107,6 @@ class TrainingModel(dict):
         for i in range(n):
             sum += (self.__y_predict([theta0, theta1], x[i]) - y[i]) * x[i]      
         return sum * (1 / n)
-    
-    def __debug(self):
-        pass
 
     def train(self):
         lr = self.__get_value('learning_rate')
@@ -92,23 +114,24 @@ class TrainingModel(dict):
         e = self.__get_value('tolerance')
         theta0 = self.__get_value('theta0')
         theta1 = self.__get_value('theta1')
-        for i in range(n):
+        hist_cost = []
+        for _ in range(n):
             tmpTheta0 = lr * self.__theta0_sum(theta0, theta1)
             tmpTheta1 = lr * self.__theta1_sum(theta0, theta1)
             theta0 = theta0 - tmpTheta0   
             theta1 = theta1 - tmpTheta1
             cost = self.__cost_func([theta0, theta1])
-            if self.verbose:
-                print(f'[ ITERATION {i} ] y = {theta0} + {theta1} * x') # TODO hacerlo bonito
-                print(f'\t> cost value: {cost}')
+            hist_cost.append(cost)
             if cost < e:
                 break
         theta0, theta1 = self.__denormalize_theta([theta0, theta1])
-        if self.visual:   
-            plt.axline(xy1=(0, theta0), slope=theta1) # TODO meterlo en el loop
+        if self.visual:
+            self.__get_value('pred_ax').axline(xy1=(0, theta0), slope=theta1)
+            self.__plot_cost(hist_cost=hist_cost)
+            self.__plot_hist(theta=theta)
+            #self.__get_value('hist_ax').hist([])
         with open('../configuration.json', 'r+') as c_file:
             c = json.loads(c_file.read())
-            print(f'{theta0}, {theta1}')
             c['theta0'] = theta0
             c['theta1'] = theta1
             c_file.seek(0)
@@ -119,15 +142,13 @@ class TrainingModel(dict):
 
 def arg_handler() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        prog='Training Model',
+        prog='trainer.py',
         description='Linear Regression model trainer'
     )
     parser.add_argument('DATASET', 
-                        default='../data.csv',
+                        default='data.csv',
                         nargs='?')
-    parser.add_argument('-v', '--verbose',
-                        action='store_true')
-    parser.add_argument('-i', '--visual',
+    parser.add_argument('-v', '--visual',
                         action='store_true')
     parser.add_argument('-d', '--debug',
                         action='store_true')
@@ -135,17 +156,12 @@ def arg_handler() -> argparse.Namespace:
             
 if __name__ == "__main__":
     args = arg_handler()
-    try:
-        t = TrainingModel(dataset=args.DATASET,
-                          verbose=args.verbose,
-                          visual=args.visual)
-        t.train()
-    except Exception as e:
-        logging.error(str(e))
-        sys.exit(1)
+#    try:
+    t = TrainingModel(dataset=args.DATASET,
+                      visual=args.visual,
+                      debug=args.debug)
+    t.train()
+#    except Exception as e:
+#        logging.error(str(e))
+#        sys.exit(1)
     sys.exit(0)
-
-
-# TODO
-# * debug : compare results with scikit learn output
-# * animation: every nth iteration, print prediction progress
