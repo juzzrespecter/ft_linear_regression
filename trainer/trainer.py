@@ -5,8 +5,7 @@ from pandas import read_csv
 import sys
 import argparse
 import logging
-#import matplotlib.pyplot as plt
-import plotly.express as px
+import matplotlib.pyplot as plt
 from plotly.subplots import make_subplots
 
 
@@ -39,16 +38,6 @@ class TrainingModel(dict):
         with open(dataset) as ds_file:
             tr_set = read_csv(ds_file)
             n_tr_set = (tr_set - tr_set.min()) / (tr_set.max() - tr_set.min())
-            if self.visual:
-                #_, (pred, cost, hist) = plt.subplots(nrows=1, ncols=3)
-                # fig = make_subplots(rows=1, cols=3)
-                # pred.scatter(x=tr_set['km'], y=tr_set['price'], color='red')
-                # pred.set(xlabel='mileage', ylabel='price', title='Linear Regression')
-                # cost.set(xlabel='n iterations', ylabel='cost', title='Cost funciton')
-                # hist.set(xlabel='mileage', ylabel='error')
-                # self.__set_value('pred_ax', pred)
-                # self.__set_value('cost_ax', cost)
-                # self.__set_value('hist_ax', hist)
             self.__set_value('x', self.__normalize(n_tr_set['km']))
             self.__set_value('y', self.__normalize(n_tr_set['price']))
             self.__set_value('training_set', tr_set)
@@ -71,24 +60,24 @@ class TrainingModel(dict):
         theta0, theta1 = theta
         return theta0 + theta1 * x
 
-    def __plot_hist(self, hist_cost, theta):
+    def __plot_values(self, h_cost, theta):
+        theta0, theta1 = theta
+        _, (lr, cf, eh) = plt.subplots(nrows=1, ncols=3)
+        self.training_set.sort_values['km']
         x, y = self.training_set['km'], self.training_set['price']
-        err = [self.__y_predict(xi, theta) - yi for (xi, yi) in (x, y)]
-        self.__get_value('hist_ax').bar(x=len(err), height=err)
+        y_pred = [self.__y_predict(theta, xi) for xi in x]
+        error = [y_predi - yi for y_predi, yi in zip(y_pred, y)]
 
-    def __plot_cost(self, hist_cost):
-        i_cost = enumerate(hist_cost)
-        i = [i[0] for i in i_cost]
-        cost = [cost[1] for cost in i_cost]
-        self.__get_value('cost_ax').plot(i, cost, color='cyan')
-
-    def __plot_values(self, hist_cost, theta):
-        x, y = self.training_set['km'], self.training_set['price']
-        lr = px.scatter(self.training_set, x='mileage', y='price')
-        fig = make_subplots(rows=1, cols=3,
-                            subplot_titles=("Linear Regresssion", "Cost Function", "Error Histogram"))
-
-        pass
+        lr.scatter(self.training_set['km'], self.training_set['price'])
+        lr.set(xlabel='mileage', ylabel='price', title='Linear Regression')
+        lr.axline(xy1=(0,theta0), slope=theta1, color='red')
+        cost_n = list(range(len(h_cost)))
+        err_n = list(range(len(error)))
+        cf.plot(cost_n, h_cost)
+        cf.set(xlabel='n iterations', ylabel='error')
+        eh.bar(err_n, error, width=0.5, color='red')
+        eh.set_ylabel(ylabel='error')
+        plt.show()
 
     def __theta0_sum(self, theta0, theta1):
         x = self.__get_value('x')
@@ -114,33 +103,29 @@ class TrainingModel(dict):
         e = self.__get_value('tolerance')
         theta0 = self.__get_value('theta0')
         theta1 = self.__get_value('theta1')
-        hist_cost = []
+        h_cost = []
         for _ in range(n):
             tmpTheta0 = lr * self.__theta0_sum(theta0, theta1)
             tmpTheta1 = lr * self.__theta1_sum(theta0, theta1)
             theta0 = theta0 - tmpTheta0   
             theta1 = theta1 - tmpTheta1
             cost = self.__cost_func([theta0, theta1])
-            hist_cost.append(cost)
+            h_cost.append(cost)
             if cost < e:
                 break
         theta0, theta1 = self.__denormalize_theta([theta0, theta1])
         if self.visual:
-            self.__get_value('pred_ax').axline(xy1=(0, theta0), slope=theta1)
-            self.__plot_cost(hist_cost=hist_cost)
-            self.__plot_hist(theta=theta)
-            #self.__get_value('hist_ax').hist([])
-        with open('../configuration.json', 'r+') as c_file:
+            self.__plot_values(h_cost=h_cost, theta=[theta0, theta1])
+        print('> saving theta ...')
+        with open('../configuration.json', 'r') as c_file:
             c = json.loads(c_file.read())
             c['theta0'] = theta0
             c['theta1'] = theta1
-            c_file.seek(0)
+        with open('../configuration.json', 'w') as c_file:
             json.dump(c, c_file, indent=2)
-        if self.visual:   
-            plt.show()
 
 
-def arg_handler() -> argparse.Namespace:
+def arg_handler():
     parser = argparse.ArgumentParser(
         prog='trainer.py',
         description='Linear Regression model trainer'

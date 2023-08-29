@@ -5,7 +5,7 @@ import json
 from sklearn.linear_model import LinearRegression
 from pandas import read_csv
 import sys
-#import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
 import logging
 
 def argument_parser():
