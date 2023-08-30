@@ -32,7 +32,7 @@ class Predictor():
 
     def __debug(self, pred):
         lr = LinearRegression()
-        lr.fit(X=self.training_set[['km']],
+        lr.fit(X=self.training_set['km'].values.reshape(-1, 1),
                y=self.training_set['price'])
         sk_pred = lr.predict([[self.value]])[0]
         plt.scatter(x=[self.value, self.value],
@@ -41,15 +41,13 @@ class Predictor():
         plt.xlabel('km') 
         plt.ylabel('price')
         plt.title=('Prediction')
-        print(f'[OURS]:   {pred}')
-        print(f'[THEIRS]: {sk_pred}')
+        print(f'[ OURS       ] {pred}')
+        print(f'[ THEIRS     ] {sk_pred}')
         plt.show()
 
     def predict(self):
         with open('../configuration.json') as c_file:
             c = json.load(c_file)
-        
-        print(f'{type(c["theta0"])}, {type(self.value)}, {type(c["theta1"])}')
         prediction = c['theta0'] + self.value * c['theta1']
         print(f'[ PREDICTION ] For value of {self.value} -> {prediction}')
         if self.debug:
@@ -58,11 +56,11 @@ class Predictor():
 
 if __name__ == "__main__":
     args = argument_parser()
-#    try:
-    p = Predictor(value=args.VALUE,
-                  debug=args.debug)
-    p.predict()
-#    except Exception as e:
-##        print(str(e))
-#        sys.exit(1)
-#    sys.exit(0)
+    try:
+        p = Predictor(value=args.VALUE,
+                      debug=args.debug)
+        p.predict()
+    except Exception as e:
+        logging.error(str(e))
+        sys.exit(1)
+    sys.exit(0)

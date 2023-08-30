@@ -46,8 +46,8 @@ class TrainingModel(dict):
         self.__set_value('learning_rate', c['hyperparameters']['learning_rate'])
         self.__set_value('n_iterations', c['hyperparameters']['n_iterations'])
         self.__set_value('tolerance', c['hyperparameters']['tolerance'])
-        self.__set_value('theta0', c['theta0'])
-        self.__set_value('theta1', c['theta1'])
+        self.__set_value('theta0', c['n_theta0'])
+        self.__set_value('theta1', c['n_theta1'])
 
     def __cost_func(self, theta):
         x, y = self.__get_value('x'), self.__get_value('y')
@@ -111,25 +111,27 @@ class TrainingModel(dict):
         lr = self.__get_value('learning_rate')
         n = self.__get_value('n_iterations')
         e = self.__get_value('tolerance')
-        theta0 = self.__get_value('theta0')
-        theta1 = self.__get_value('theta1')
+        n_theta0 = self.__get_value('theta0')
+        n_theta1 = self.__get_value('theta1')
         h_cost = []
         for _ in range(n):
-            tmpTheta0 = lr * self.__theta0_sum(theta0, theta1)
-            tmpTheta1 = lr * self.__theta1_sum(theta0, theta1)
-            theta0 = theta0 - tmpTheta0   
-            theta1 = theta1 - tmpTheta1
-            cost = self.__cost_func([theta0, theta1])
+            tmpTheta0 = lr * self.__theta0_sum(n_theta0, n_theta1)
+            tmpTheta1 = lr * self.__theta1_sum(n_theta0, n_theta1)
+            n_theta0 = n_theta0 - tmpTheta0   
+            n_theta1 = n_theta1 - tmpTheta1
+            cost = self.__cost_func([n_theta0, n_theta1])
             h_cost.append(cost)
             if cost < e:
                 break
-        theta0, theta1 = self.__denormalize_theta([theta0, theta1])
+        theta0, theta1 = self.__denormalize_theta([n_theta0, n_theta1])
         print('[ TRAINER ] Finished model training, with (theta0, theta1): (%.3f, %.3f)' % (theta0, theta1))
         print('[         ] Regression precision: %.4f' % self.__calc_r_squared([theta0, theta1]))
         if self.visual:
             self.__plot_values(h_cost=h_cost, theta=[theta0, theta1])        
         with open('../configuration.json', 'r') as c_file:
             c = json.loads(c_file.read())
+            c['n_theta0'] = n_theta0
+            c['n_theta1'] = n_theta1
             c['theta0'] = theta0
             c['theta1'] = theta1
         with open('../configuration.json', 'w') as c_file:
