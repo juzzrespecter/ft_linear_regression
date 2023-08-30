@@ -7,6 +7,7 @@ import argparse
 import logging
 import matplotlib.pyplot as plt
 from plotly.subplots import make_subplots
+from math import isnan
 
 
             
@@ -63,7 +64,7 @@ class TrainingModel(dict):
     def __plot_values(self, h_cost, theta):
         theta0, theta1 = theta
         _, (lr, cf, eh) = plt.subplots(nrows=1, ncols=3)
-        self.training_set.sort_values['km']
+        self.training_set = self.training_set.sort_values(by='km')
         x, y = self.training_set['km'], self.training_set['price']
         y_pred = [self.__y_predict(theta, xi) for xi in x]
         error = [y_predi - yi for y_predi, yi in zip(y_pred, y)]
@@ -74,9 +75,10 @@ class TrainingModel(dict):
         cost_n = list(range(len(h_cost)))
         err_n = list(range(len(error)))
         cf.plot(cost_n, h_cost)
-        cf.set(xlabel='n iterations', ylabel='error')
+        cf.set(xlabel='n iterations', ylabel='error', title='Cost Evolution')
         eh.bar(err_n, error, width=0.5, color='red')
         eh.set_ylabel(ylabel='error')
+        eh.set_title('Error Histogram')
         plt.show()
 
     def __theta0_sum(self, theta0, theta1):
@@ -96,6 +98,14 @@ class TrainingModel(dict):
         for i in range(n):
             sum += (self.__y_predict([theta0, theta1], x[i]) - y[i]) * x[i]      
         return sum * (1 / n)
+    
+    def __calc_r_squared(self, theta):
+        x, y = self.training_set['km'], self.training_set['price']
+        y_pred = [self.__y_predict(theta=theta, x=xi) for xi in x]
+        y_mean = sum(y) / len(y)
+        ss_res = sum([(yi - y_predi) ** 2 for yi, y_predi in zip(y, y_pred)])
+        ss_tot = sum([(yi - y_mean) ** 2 for yi in y])
+        return 1 - (ss_res / ss_tot)
 
     def train(self):
         lr = self.__get_value('learning_rate')
@@ -114,9 +124,10 @@ class TrainingModel(dict):
             if cost < e:
                 break
         theta0, theta1 = self.__denormalize_theta([theta0, theta1])
+        print('[ TRAINER ] Finished model training, with (theta0, theta1): (%.3f, %.3f)' % (theta0, theta1))
+        print('[         ] Regression precision: %.4f' % self.__calc_r_squared([theta0, theta1]))
         if self.visual:
-            self.__plot_values(h_cost=h_cost, theta=[theta0, theta1])
-        print('> saving theta ...')
+            self.__plot_values(h_cost=h_cost, theta=[theta0, theta1])        
         with open('../configuration.json', 'r') as c_file:
             c = json.loads(c_file.read())
             c['theta0'] = theta0
@@ -141,12 +152,12 @@ def arg_handler():
             
 if __name__ == "__main__":
     args = arg_handler()
-#    try:
-    t = TrainingModel(dataset=args.DATASET,
-                      visual=args.visual,
-                      debug=args.debug)
-    t.train()
-#    except Exception as e:
-#        logging.error(str(e))
-#        sys.exit(1)
+    try:
+        t = TrainingModel(dataset=args.DATASET,
+                          visual=args.visual,
+                          debug=args.debug)
+        t.train()
+    except Exception as e:
+        logging.error(str(e))
+        sys.exit(1)
     sys.exit(0)
